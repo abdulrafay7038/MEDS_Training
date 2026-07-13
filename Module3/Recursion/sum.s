@@ -7,7 +7,7 @@
 
 #     return n + sum(n - 1);
 # }
-
+.globl main
 .text
 sum:    #sum(a1 = n)
     addi sp, sp, -16
@@ -20,5 +20,19 @@ sum:    #sum(a1 = n)
 
     lw   a1, 8(sp)        # Retrive original n
     add  a0, a0, a1       # a0 = n + sum(n-1)
+
+    lw   ra, 12(sp)
+    addi sp, sp, -16
+    ret
     base_case:
+        li   a0, 0
+        lw   ra, 12(sp)
+        addi sp, sp, -16
+        ret
+main:
+    li a1, 2
+    call sum    # Returns sum in a0
+    mv a1, a0
+    li a0, 1
+    ecall
         
