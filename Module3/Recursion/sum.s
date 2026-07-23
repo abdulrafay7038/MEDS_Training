@@ -18,16 +18,16 @@ sum:    #sum(a1 = n)
     addi a1, a1, -1
     call sum              # a0 = sum(n-1)
 
-    lw   a1, 8(sp)        # Retrive original n
-    add  a0, a0, a1       # a0 = n + sum(n-1)
+    lw   t0, 8(sp)        # Retrive original n
+    add  a0, t0, a0       # a0 = n + sum(n-1)
 
     lw   ra, 12(sp)
-    addi sp, sp, -16
+    addi sp, sp, 16
     ret
     base_case:
         li   a0, 0
         lw   ra, 12(sp)
-        addi sp, sp, -16
+        addi sp, sp, 16
         ret
 main:
     li a1, 2
