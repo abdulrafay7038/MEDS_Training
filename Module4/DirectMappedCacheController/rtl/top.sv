@@ -29,8 +29,6 @@ module top(
     );
 
     //----------Cache Memory------------//
-    logic [TAG_WIDTH-1:0] stored_tag;
-    logic                 valid;
     logic                 wr_en, rd_en;
     cache_mem Memory(
         .clk(clk),
@@ -41,14 +39,12 @@ module top(
         .tag(tag),
         .index(index),
         .offset(offset),
-        .stored_tag(stored_tag),
-        .valid(valid),
-        .data_out(data_out)
+        .data_out(data_out),
+        .hit(hit)
     );
 
     //----------Cache Controller------------//
-    assign hit = valid && (tag == stored_tag);
-    assign miss = !hit;
+    
     cache_controller Controller(
         .clk(clk),
         .rst(rst),
@@ -59,5 +55,6 @@ module top(
         .rd_en(rd_en),
         .done(done)
     );
+    assign miss = !hit;
 
 endmodule

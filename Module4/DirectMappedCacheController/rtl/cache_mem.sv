@@ -15,8 +15,7 @@ module cache_mem(
     
 
     output logic   [DATA_WIDTH-1:0]      data_out,
-    output logic   [TAG_WIDTH-1:0]       stored_tag,
-    output logic                         valid
+    output logic                         hit
 
 );
 
@@ -41,8 +40,6 @@ module cache_mem(
             tag_array[index]          <=  tag;
         end
     end
-
-    assign stored_tag   = tag_array[index];
-    assign valid        = valid_array[index];
+    assign hit = valid_array[index] && (tag == tag_array[index]);
 
 endmodule

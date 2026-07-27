@@ -49,7 +49,7 @@ module top_tb();
 
     task verify_hit(input logic [15:0] addr, input logic [31:0] expected);
         read_cache(addr);
-        if (UUT.hit) begin
+        if (hit) begin
             if (data_out == expected)
                 $display("[PASS]: Cache Hit! Expected = %0d, Actual = %0d", expected, data_out);
             else 
