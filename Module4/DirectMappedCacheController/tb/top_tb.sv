@@ -30,65 +30,96 @@ module top_tb();
     initial   clk = 1;
     always #5 clk = ~clk;
 
-    initial begin     
-$display("Writing data to an empty cache line. ");
-        req_type = 1;                              //Write req
-        data_in = 32;
-        address = 16'b1101101100_0001_00;          //tag_index_offset
-        req_valid = 0;
-        rst = 1;
-        @(posedge clk) rst = 0; req_valid = 1;
+    task write_cache(input logic [15:0] addr, input logic [31:0] data);
+        req_type = 1;           //Write req
+        data_in = data;
+        address = addr;
+        req_valid = 1;
         @(posedge clk) req_valid = 0;
-        @(negedge done);                   // wait for controller to finish write
+        @(negedge done);        //let the FSM get done
+    endtask
 
-$display("Reading the same address and verifying a cache hit");
-        req_type = 0; req_valid = 1;                //Read req
+    task read_cache(input logic [15:0] addr);
+        req_type = 0;           //Read req
+        address = addr;
+        req_valid = 1;
         @(posedge clk) req_valid = 0;
-        @(negedge done);                            // wait for controller to finish read
+        @(negedge done);       // wait for controller to finish read
+    endtask
+
+    task verify_hit(input logic [15:0] addr, input logic [31:0] expected);
+        read_cache(addr);
         if (UUT.hit) begin
-            if (data_out == 32'd32)
-                $display("PASS: Cache Hit! Read data = %0d", data_out);
+            if (data_out == expected)
+                $display("[PASS]: Cache Hit! Expected = %0d, Actual = %0d", expected, data_out);
             else 
-                $display("FAIL: Cache Hit but data doesn't match, expected = 32, actual = %0d", data_out);
-        end    
+                $display("[FAIL]: Cache Hit but data doesn't match, Expected = 32, Actual = %0d", expected, data_out);
+        end 
         else
-            $display("FAIL: No hit");   
+            $display("[FAIL]: Cache Hit couldn't be verified");  
+    endtask
 
-$display("Reading a different address that maps to an empty line (cache miss)");
-        @(posedge clk) req_valid = 1;
-        address = 16'b1111111100_0010_00;    //tag_index_offset
-        @(posedge clk) req_valid = 0;
-        @(negedge done);                     // wait for controller to finish read
+    task verify_miss(input logic [15:0] addr);
+        read_cache(addr);
         if (miss) 
-            $display("PASS: Cache Miss!");       
+            $display("[PASS]: Cache Miss!");       
         else
-            $display("FAIL: Cache Miss couldn't be verified");  
+            $display("[FAIL]: Cache Miss couldn't be verified"); 
+    endtask
 
-$display("Accessing two addresses that map to the same index but have different tags and verifying correct cache behavior.");
-            //First 
+    initial begin    
+
+        $display("==================================================");    
+        $display("Writing data to an empty cache line. ");
+        $display("==================================================");
+        rst = 1; @(posedge clk) rst = 0; 
+        write_cache(16'b0000001100_0001_00, 32'd32); 
+        write_cache(16'b0000001100_0001_01, 32'd33);  
+        write_cache(16'b0000001100_0001_10, 32'd34);
+        write_cache(16'b0000001100_0001_11, 32'd35);
+        $display("==================================================");
+        $display("Reading the same address and verifying a cache hit");
+        $display("==================================================");
+        verify_hit(16'b0000001100_0001_00, 32'd32);  
+        verify_hit(16'b0000001100_0001_01, 32'd33); 
+        verify_hit(16'b0000001100_0001_10, 32'd34); 
+        verify_hit(16'b0000001100_0001_11, 32'd35); 
+        $display("===================================================================");
+        $display("Reading a different address that maps to an empty line (cache miss)");
+        $display("===================================================================");
+        verify_miss(16'b1110001100_0010_00);
+        $display("================================================================================================================");
+        $display("Accessing two addresses that map to the same index but have different tags and verifying correct cache behavior.");
+        $display("================================================================================================================");
             
-            @(posedge clk) req_valid = 1;
-            address = 16'b1101101100_0001_00;
-            @(posedge clk) req_valid = 0;
-            @(negedge done);                        // wait for controller to finish read
-            if (UUT.hit) begin
-                if (data_out == 32'd32)
-                    $display("PASS: Cache Hit!");
-                else 
-                    $display("FAIL: Cache Hit but data doesn't match, expected = 32, actual = %d", data_out);
-            end    
-            else
-                $display("FAIL: No hit"); 
-            //Second    
-            @(posedge clk) req_valid = 1;
-            address = 16'b0000001100_0001_00;
-            @(posedge clk) req_valid = 0;
-            @(negedge done);                        // wait for controller to finish read
-            if (miss) begin
-                $display("PASS: Cache Miss!"); 
-            end         
-            else
-                $display("FAIL: Cache Miss couldn't be verified");    
+        $display("-----------First------------");
+        verify_hit(16'b0000001100_0001_11, 32'd35);
+        $display("-----------Second------------");   
+        verify_miss(16'b1101101100_0001_00);
+
+        $display("==========================================");
+        $display("Writing more cache lines and verifying hit");
+        $display("==========================================");
+        write_cache(16'b0001111100_0010_00, 32'd75); 
+        write_cache(16'b0001111100_0010_01, 32'd78);  
+        write_cache(16'b0001111100_0010_10, 32'd76);
+        write_cache(16'b0001111100_0010_11, 32'd91);
+
+        verify_hit(16'b0001111100_0010_00, 32'd75); 
+        verify_hit(16'b0001111100_0010_01, 32'd78);  
+        verify_hit(16'b0001111100_0010_10, 32'd76);
+        verify_hit(16'b0001111100_0010_11, 32'd91);
+
+        write_cache(16'b1001111100_0011_00, 32'd92); 
+        write_cache(16'b1001111100_0011_01, 32'd93);  
+        write_cache(16'b1001111100_0011_10, 32'd94);
+        write_cache(16'b1001111100_0011_11, 32'd95);
+
+        verify_hit(16'b1001111100_0011_00, 32'd92); 
+        verify_hit(16'b1001111100_0011_01, 32'd93);  
+        verify_hit(16'b1001111100_0011_10, 32'd94);
+        verify_hit(16'b1001111100_0011_11, 32'd95);
+
         $finish;
   
     end
