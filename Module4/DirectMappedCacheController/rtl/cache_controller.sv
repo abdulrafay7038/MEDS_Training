@@ -10,11 +10,10 @@ module cache_controller(
 
     output logic                         rd_en,
     output logic                         wr_en,
-    output logic                         miss,
     output logic                         done
 );
     
-    typedef enum logic [2:0] {IDLE, READ, WRITE, MISS, DONE} state;
+    typedef enum logic [2:0] {IDLE, READ, WRITE, DONE} state;
     state PS,NS;
 
     //State Register
@@ -34,9 +33,8 @@ module cache_controller(
                 else
                     NS = IDLE;      
             end
-            READ:  NS = hit ? DONE: MISS;
+            READ:  NS = DONE;
             WRITE: NS = DONE;
-            MISS:  NS = DONE;
             DONE:  NS = IDLE;
         endcase
     end
@@ -48,31 +46,21 @@ module cache_controller(
                 rd_en = 0;
                 wr_en = 0;
                 done  = 0;
-                miss  = 0;
             end
             READ: begin
                 rd_en = hit ? 1 : 0;
                 wr_en = 0;
                 done  = 0;
-                miss  = 0;
             end
             WRITE: begin
                 rd_en = 0;
                 wr_en = 1;
                 done  = 0;
-                miss  = 0;
-            end
-            MISS: begin
-                rd_en = 0;
-                wr_en = 0;
-                done  = 0;
-                miss  = 1;
             end
             DONE: begin
                 rd_en = 0;
                 wr_en = 0;
                 done  = 1;
-                miss  = 0;
             end
         endcase
     end

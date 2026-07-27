@@ -12,6 +12,7 @@ module top(
 
     output logic [DATA_WIDTH-1:0] data_out,
     output logic                  done,
+    output logic                  hit,
     output logic                  miss
 );
 
@@ -46,8 +47,8 @@ module top(
     );
 
     //----------Cache Controller------------//
-    logic hit;
     assign hit = valid && (tag == stored_tag);
+    assign miss = !hit;
     cache_controller Controller(
         .clk(clk),
         .rst(rst),
@@ -56,8 +57,7 @@ module top(
         .hit(hit),
         .wr_en(wr_en),
         .rd_en(rd_en),
-        .done(done),
-        .miss(miss)
+        .done(done)
     );
 
 endmodule

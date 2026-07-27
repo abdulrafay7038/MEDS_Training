@@ -10,6 +10,7 @@ module top_tb();
     logic                          req_type;  //1 = write, 0 = read
     logic                          req_valid;
     logic    [DATA_WIDTH-1:0]      data_out;
+    logic                          hit;
     logic                          miss;
     logic                          done;
 
@@ -22,7 +23,8 @@ module top_tb();
         .req_valid(req_valid),
         .data_out(data_out),
         .done(done),
-        .miss(miss)
+        .miss(miss),
+        .hit(hit)
     );
 
     initial   clk = 1;
@@ -35,16 +37,14 @@ $display("Writing data to an empty cache line. ");
         address = 16'b1101101100_0001_00;          //tag_index_offset
         req_valid = 0;
         rst = 1;
-        #10 rst = 0; req_valid = 1;
-        #10 req_valid = 0;
-        @(posedge done);
-        #10;
+        @(posedge clk) rst = 0; req_valid = 1;
+        @(posedge clk) req_valid = 0;
+        @(negedge done);                   // wait for controller to finish write
 
 $display("Reading the same address and verifying a cache hit");
         req_type = 0; req_valid = 1;                //Read req
-        #10 req_valid = 0;
-        @(posedge done);
-        #5;
+        @(posedge clk) req_valid = 0;
+        @(negedge done);                            // wait for controller to finish read
         if (UUT.hit) begin
             if (data_out == 32'd32)
                 $display("PASS: Cache Hit! Read data = %0d", data_out);
@@ -57,8 +57,8 @@ $display("Reading the same address and verifying a cache hit");
 $display("Reading a different address that maps to an empty line (cache miss)");
         @(posedge clk) req_valid = 1;
         address = 16'b1111111100_0010_00;    //tag_index_offset
-        #10 req_valid = 0;
-        #15;
+        @(posedge clk) req_valid = 0;
+        @(negedge done);                     // wait for controller to finish read
         if (miss) 
             $display("PASS: Cache Miss!");       
         else
@@ -67,11 +67,10 @@ $display("Reading a different address that maps to an empty line (cache miss)");
 $display("Accessing two addresses that map to the same index but have different tags and verifying correct cache behavior.");
             //First 
             
-            repeat(2)@(posedge clk) req_valid = 1;
+            @(posedge clk) req_valid = 1;
             address = 16'b1101101100_0001_00;
-            #10 req_valid = 0;
-            @(posedge done);
-            #5;
+            @(posedge clk) req_valid = 0;
+            @(negedge done);                        // wait for controller to finish read
             if (UUT.hit) begin
                 if (data_out == 32'd32)
                     $display("PASS: Cache Hit!");
@@ -83,8 +82,8 @@ $display("Accessing two addresses that map to the same index but have different 
             //Second    
             @(posedge clk) req_valid = 1;
             address = 16'b0000001100_0001_00;
-            #10 req_valid = 0;
-            @(posedge miss);
+            @(posedge clk) req_valid = 0;
+            @(negedge done);                        // wait for controller to finish read
             if (miss) begin
                 $display("PASS: Cache Miss!"); 
             end         
